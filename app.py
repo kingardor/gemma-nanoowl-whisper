@@ -1,11 +1,46 @@
 import sys
 sys.path.insert(1, 'src')
+from typing import Tuple
 import time
+import re
+import numpy as np
+import cv2
+from PIL import Image
 from threading import Thread
+
+# Whisper
 from speechstream import StreamHandler
+
+# LLMs
 from gemma import Gemma
 from llama import Llamav2
 from customgpt import CustomGPT
+
+# LLVM
+from owlsimple import HootHoot
+
+
+def parse_commands(text: str) -> Tuple[str, list]:
+    # Remove all \n and \t
+    text = text.replace("\n", "")
+    text = text.replace("\t", "")
+
+    # Replace AI with A.I.
+    text = text.replace("AI", "A.I.")
+
+    # Remove all text between * and *
+    remove = re.sub(r'\*(.*?)\*', '', text)
+    for r in remove:
+        text = text.replace(f"*{r}*", "")
+
+    # Extract all text between @ and @
+    commands = re.findall(r'@(.*?)@', text) 
+    
+    # Remove all commands from text
+    for command in commands:
+        text = text.replace(f"@{command}@", "")
+    
+    return text, commands
 
 def conversation(
         handler: StreamHandler,
@@ -28,9 +63,35 @@ def conversation(
             robot_output = llm.exec(user_input)
             print("Veronica: {}".format(robot_output))
 
-        time.sleep(0.25)
+        time.sleep(0.1)
 
-def main(asr: bool = False, model: str = "gpt"):
+def vision(
+        owl: HootHoot, 
+        v4l2: int
+    ) -> None:
+    source = cv2.VideoCapture(v4l2)
+    while True:
+        ret, frame = source.read()
+        if ret:
+            # Convert frame to pil
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame = Image.fromarray(frame)
+            output, image = owl.predict(frame)
+            # Convert image to numpy
+            image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+            cv2.imshow("ZByHP", image)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        else:
+            break
+    source.release()
+    cv2.destroyAllWindows()
+
+def main(
+        asr: bool = False,
+        cv: bool = True, 
+        model: str = "gpt"
+    ) -> None:
 
     # Initialise LLM
     llm = None
@@ -40,9 +101,23 @@ def main(asr: bool = False, model: str = "gpt"):
         llm = Llamav2()
     else: 
         llm = Gemma()
+    
+    if cv:
+        # Initialise OWL
+        owl = HootHoot()
 
+        vision_thread = Thread(
+            target=vision, 
+            args=(
+                owl,
+                0
+            )
+        )
+        vision_thread.daemon = True
+        vision_thread.start()
+    
+    # Initialise Whisper
     if asr:
-        # Initialise Whisper
         handler = StreamHandler()
 
         conversation_thread = Thread(
@@ -62,7 +137,11 @@ def main(asr: bool = False, model: str = "gpt"):
         while True:
             user_input = input("Me: ")
             robot_output = llm.exec(user_input)
-            print("Veronica: {}".format(robot_output))
+            text, commands = parse_commands(robot_output)
+            print("Veronica: {}".format(text))
+            if commands:
+                print("Commands: {}".format(commands))
+                owl.update_prompt(commands)
     
 
 if __name__ == "__main__":
