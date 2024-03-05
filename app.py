@@ -4,6 +4,8 @@ import time
 from threading import Thread
 from speechstream import StreamHandler
 from gemma import Gemma
+from llama import Llamav2
+from customgpt import CustomGPT
 
 def conversation(
         handler: StreamHandler,
@@ -28,23 +30,40 @@ def conversation(
 
         time.sleep(0.25)
 
-def main():
+def main(asr: bool = False, model: str = "gpt"):
 
-    # Initialise Gemma
-    llm = Gemma()
+    # Initialise LLM
+    llm = None
+    if model == "gpt":
+        llm = CustomGPT()
+    elif model == "llama":
+        llm = Llamav2()
+    else: 
+        llm = Gemma()
 
-    # Initialise Whisper
-    handler = StreamHandler()
-    
-    conversation_thread = Thread(
-        target=conversation, 
-        args=(
-                handler,
-                llm
+    if asr:
+        # Initialise Whisper
+        handler = StreamHandler()
+
+        conversation_thread = Thread(
+            target=conversation, 
+            args=(
+                    handler,
+                    llm
+                )
             )
-        )
-    conversation_thread.daemon = True
-    conversation_thread.start()
+        conversation_thread.daemon = True
+        conversation_thread.start()
+
+        while True:
+            time.sleep(1)
+    
+    else:
+        while True:
+            user_input = input("Me: ")
+            robot_output = llm.exec(user_input)
+            print("Veronica: {}".format(robot_output))
+    
 
 if __name__ == "__main__":
     main()
