@@ -19,7 +19,6 @@ from customgpt import CustomGPT
 # LLVM
 from owlsimple import HootHoot
 
-
 def parse_commands(text: str) -> Tuple[str, list]:
     # Remove all \n and \t
     text = text.replace("\n", "")
