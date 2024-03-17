@@ -14,7 +14,6 @@ class HootHoot:
             image_encoder_engine: str = "engines/owlvit_image_encoder_patch32.engine"
     ) -> None:
         
-        self.old_prompt = []
         self.new_prompt = []
         self.tree = None
         self.clip_text_encodings = None
@@ -69,7 +68,6 @@ class HootHoot:
                 command = command.lower()
                 if command in self.new_prompt:
                     self.new_prompt.remove(command)
-        
         self.update_encodings(self.new_prompt)
                             
     def update_encodings(self, prompt: List) -> None:

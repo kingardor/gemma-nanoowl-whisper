@@ -13,7 +13,6 @@ class HootHoot:
             image_encoder_engine: str = "engines/owlvit_image_encoder_patch32.engine"
     ) -> None:
         
-        self.old_prompt = ['person']
         self.new_prompt = ['person']
         self.thresholds = [0.1]
         
@@ -70,6 +69,7 @@ class HootHoot:
             self.thresholds = []
         else:
             self.thresholds = [0.1] * len(self.new_prompt)
+        print('Current LLVM Promt: {}'.format(self.new_prompt))
 
     def predict(
             self, 
